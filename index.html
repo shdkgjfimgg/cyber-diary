@@ -1,0 +1,1781 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memory Diary</title>
+    <style>
+:root {
+  color-scheme: light;
+  --bg: #f5f5f7;
+  --surface-r: 255; --surface-g: 255; --surface-b: 255;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-2: rgba(255, 255, 255, 0.55);
+  --surface-3: rgba(255, 255, 255, 0.40);
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --border: rgba(0, 0, 0, 0.10);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  --accent: #007aff;
+  --accent-soft: rgba(0, 122, 255, 0.12);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-xs: 8px;
+  --bg-blur: 20px;
+  --bg-opacity: 0.72;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface-r: 28; --surface-g: 28; --surface-b: 30;
+  --surface: rgba(28, 28, 30, 0.78);
+  --surface-2: rgba(44, 44, 46, 0.55);
+  --surface-3: rgba(58, 58, 60, 0.40);
+  --text: #ffffff;
+  --text-secondary: #8e8e93;
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.20);
+  --accent: #0a84ff;
+  --accent-soft: rgba(10, 132, 255, 0.18);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="cyber"] {
+  color-scheme: dark;
+  --bg: #090b10;
+  --surface-r: 17; --surface-g: 21; --surface-b: 29;
+  --surface: #11151d;
+  --surface-2: #151b25;
+  --surface-3: #1a2230;
+  --text: #ecf5ff;
+  --text-secondary: #8d9aaa;
+  --border: rgba(178, 219, 255, 0.14);
+  --border-strong: rgba(178, 219, 255, 0.22);
+  --accent: #35d9ff;
+  --accent-soft: rgba(53, 217, 255, 0.12);
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --radius: 10px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.35s ease, color 0.35s ease;
+}
+
+/* Custom background */
+body.has-custom-bg {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+body.has-custom-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.06);
+  z-index: 0;
+  pointer-events: none;
+}
+
+main { position: relative; z-index: 1; }
+
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+
+.shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: rgba(var(--surface-r), var(--surface-g), var(--surface-b), var(--bg-opacity));
+  padding: 24px 18px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  backdrop-filter: blur(var(--bg-blur));
+  -webkit-backdrop-filter: blur(var(--bg-blur));
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+}
+
+.brand h1, .topbar h2, .panel-head h3 { margin: 0; letter-spacing: -0.01em; }
+.brand h1 { font-size: 20px; font-weight: 700; }
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.search-block label, .field label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: var(--radius-xs);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-row:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.search-row input,
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  min-width: 0;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  outline: none;
+  padding: 11px 14px;
+  border-radius: var(--radius-xs);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.search-row input {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.field textarea { resize: vertical; }
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--surface);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  background: transparent;
+  padding: 5px 0;
+  margin: 0;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+
+#energyInput::-webkit-slider-runnable-track {
+  background-image: linear-gradient(to right, var(--accent), var(--accent));
+  background-repeat: no-repeat;
+  background-size: var(--energy-pct, 72%) 100%;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--bg), 0 2px 6px rgba(0,0,0,0.15);
+  transition: transform 0.15s ease;
+  margin-top: -5px;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+
+#energyInput::-moz-range-track {
+  background-image: linear-gradient(to right, var(--accent), var(--accent));
+  background-repeat: no-repeat;
+  background-size: var(--energy-pct, 72%) 100%;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--bg), 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.filter-list {
+  display: grid;
+  gap: 6px;
+  margin: 20px 0;
+}
+
+.filter-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 10px 12px;
+  text-align: left;
+  border-radius: var(--radius-xs);
+  font-size: 14px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.filter-button.active,
+.filter-button:hover {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.cyan { background: #35d9ff; }
+.green { background: #48f0a4; }
+.violet { background: #a98cff; }
+.amber { background: #ffcb6b; }
+
+.mini-panel {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.mini-title {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.file-actions { display: flex; gap: 8px; }
+
+.icon-button, .ghost-button, .primary-button {
+  border-radius: var(--radius-xs);
+  min-height: 38px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.icon-button {
+  width: 38px;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  background: var(--surface-2);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.icon-button:hover {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+
+.workspace { padding: 24px; }
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  min-height: 100px;
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  background: rgba(var(--surface-r), var(--surface-g), var(--surface-b), var(--bg-opacity));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--bg-blur));
+  -webkit-backdrop-filter: blur(var(--bg-blur));
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+
+.topbar h2 {
+  max-width: 720px;
+  font-size: clamp(22px, 2.5vw, 36px);
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.stats div {
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  text-align: center;
+  border-radius: var(--radius-xs);
+}
+
+.stats strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stats span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.control-band {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-top: 16px;
+  padding: 20px;
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+
+.timeline-panel,
+.detail-panel,
+.map-panel,
+.review-panel {
+  background: rgba(var(--surface-r), var(--surface-g), var(--surface-b), var(--bg-opacity));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--bg-blur));
+  -webkit-backdrop-filter: blur(var(--bg-blur));
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+
+.entry-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 180px 180px;
+  gap: 14px;
+  align-items: end;
+}
+
+.span-2 { grid-column: span 2; }
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.upload-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.ghost-button, .primary-button {
+  padding: 0 16px;
+  color: var(--text);
+  background: var(--surface-2);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ghost-button:hover {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+
+.primary-button {
+  color: #fff;
+  border-color: transparent;
+  background: var(--accent);
+  font-weight: 600;
+}
+
+.primary-button:hover { opacity: 0.88; }
+
+.compact { min-height: 34px; }
+
+.image-preview {
+  margin-top: 10px;
+  width: 124px;
+  height: 76px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(360px, 1.25fr) minmax(280px, 0.9fr);
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+.timeline-panel, .detail-panel, .map-panel, .review-panel { padding: 20px; }
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.timeline-list {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-list::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 5px;
+  bottom: 5px;
+  width: 1px;
+  background: linear-gradient(var(--accent), rgba(150,150,180,0.3), transparent);
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 34px;
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 18px;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border: 3px solid var(--bg);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 0 12px rgba(0,0,0,0.08);
+}
+
+.timeline-card {
+  width: 100%;
+  color: inherit;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  text-align: left;
+  padding: 12px;
+  border-radius: var(--radius-xs);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.timeline-card:hover,
+.timeline-card.active {
+  border-color: var(--accent);
+  background: var(--surface-3);
+}
+
+.timeline-card time {
+  display: block;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.timeline-card h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.timeline-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.marker-row, .tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chip {
+  color: var(--text-secondary);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.detail-panel { min-height: 560px; }
+
+.empty-detail {
+  min-height: 480px;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.detail-hero {
+  min-height: 210px;
+  border: 1px solid var(--border);
+  background-size: cover;
+  background-position: center;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+}
+
+.detail-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,0.35), transparent);
+}
+
+.detail-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.detail-title h3 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.detail-title time {
+  color: var(--accent);
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.entry-body {
+  color: var(--text);
+  line-height: 1.8;
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.meta-grid div {
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+}
+
+.meta-grid span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.meta-grid strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.map-grid {
+  position: relative;
+  height: 248px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(0,122,255,0.06), transparent 60%);
+  background-size: 28px 28px, 28px 28px, cover;
+  border-radius: var(--radius-xs);
+}
+
+[data-theme="dark"] .map-grid {
+  background:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(10,132,255,0.08), transparent 60%);
+  background-size: 28px 28px, 28px 28px, cover;
+}
+
+.map-pin {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: #48f0a4;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 10px rgba(72, 240, 164, 0.35);
+}
+
+.map-pin.active {
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+}
+
+.summary-list { display: grid; gap: 10px; }
+
+.summary-card {
+  padding: 12px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  line-height: 1.55;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+}
+
+.summary-card strong { color: var(--accent); }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Theme & Background panel */
+.theme-panel {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.theme-panel label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.theme-options {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.theme-chip {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.theme-chip:hover { border-color: var(--border-strong); color: var(--text); }
+
+.theme-chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.bg-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.bg-thumb {
+  aspect-ratio: 16 / 10;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  background-size: cover;
+  background-position: center;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.bg-thumb:hover { transform: scale(1.03); }
+
+.bg-thumb.active { border-color: var(--accent); }
+
+.bg-upload-label {
+  display: block;
+  padding: 8px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xs);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.bg-upload-label:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 1180px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .entry-form, .main-grid { grid-template-columns: 1fr 1fr; }
+  .detail-panel { grid-column: span 2; }
+}
+
+@media (max-width: 760px) {
+  .workspace, .sidebar { padding: 16px; }
+  .topbar, .upload-row, .detail-title { display: grid; }
+  .stats, .filter-list, .entry-form, .main-grid, .meta-grid { grid-template-columns: 1fr; }
+  .span-2, .detail-panel { grid-column: auto; }
+  .upload-row { grid-template-columns: 1fr; }
+  .bg-gallery { grid-template-columns: repeat(2, 1fr); }
+}
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="sidebar" aria-label="日记导航">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">CD</div>
+          <div>
+            <p class="eyebrow">Memory Archive</p>
+            <h1>记忆日记</h1>
+          </div>
+        </div>
+
+        <div class="search-block">
+          <label for="searchInput">检索记忆</label>
+          <div class="search-row">
+            <span aria-hidden="true">⌕</span>
+            <input id="searchInput" type="search" placeholder="标题、正文、标签、地点" />
+          </div>
+        </div>
+
+        <nav class="filter-list" aria-label="筛选">
+          <button class="filter-button active" data-filter="all" type="button">
+            <span class="dot cyan"></span>全部节点
+          </button>
+          <button class="filter-button" data-filter="photo" type="button">
+            <span class="dot violet"></span>带图片
+          </button>
+          <button class="filter-button" data-filter="geo" type="button">
+            <span class="dot green"></span>有坐标
+          </button>
+          <button class="filter-button" data-filter="high" type="button">
+            <span class="dot amber"></span>高能量
+          </button>
+        </nav>
+
+        <section class="mini-panel">
+          <div class="mini-title">本地档案</div>
+          <div class="file-actions">
+            <button id="exportButton" class="icon-button" type="button" aria-label="导出 JSON" title="导出 JSON">
+              ⇩
+            </button>
+            <label class="icon-button" aria-label="导入 JSON" title="导入 JSON">
+              ⇧
+              <input id="importInput" class="sr-only" type="file" accept="application/json" />
+            </label>
+            <button id="resetButton" class="icon-button danger" type="button" aria-label="恢复示例数据" title="恢复示例数据">
+              ↻
+            </button>
+          </div>
+        </section>
+
+        <section class="theme-panel">
+          <label>主题</label>
+          <div class="theme-options" id="themeOptions">
+            <button class="theme-chip active" data-theme="light" type="button">浅色</button>
+            <button class="theme-chip" data-theme="dark" type="button">纯黑</button>
+            <button class="theme-chip" data-theme="cyber" type="button">赛博</button>
+          </div>
+
+          <label>背景</label>
+          <div class="bg-gallery" id="bgGallery">
+            <div class="bg-thumb active" data-bg="none" style="background: var(--surface-3);" title="无背景"></div>
+            <div class="bg-thumb" data-bg="city" style="background: linear-gradient(135deg, #667eea, #764ba2);" title="城市"></div>
+            <div class="bg-thumb" data-bg="sunset" style="background: linear-gradient(135deg, #f093fb, #f5576c);" title="日落"></div>
+            <div class="bg-thumb" data-bg="sea" style="background: linear-gradient(135deg, #4facfe, #00f2fe);" title="海边"></div>
+            <div class="bg-thumb" data-bg="window" style="background: linear-gradient(135deg, #a8edea, #fed6e3);" title="窗边"></div>
+            <div class="bg-thumb" data-bg="night" style="background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);" title="夜景"></div>
+          </div>
+          <label class="bg-upload-label" aria-label="上传自定义背景" title="上传自定义背景">
+            上传照片
+            <input id="bgUpload" class="sr-only" type="file" accept="image/*" />
+          </label>
+
+          <label>磨砂强度</label>
+          <div class="field" style="margin-top:6px;">
+            <input id="blurInput" type="range" min="0" max="60" value="20" />
+            <div style="display:flex;justify-content:space-between;color:var(--text-secondary);font-size:11px;margin-top:2px;">
+              <span>清晰</span><span id="blurValue">20px</span><span>朦胧</span>
+            </div>
+          </div>
+          <label style="margin-top:12px;">透明度</label>
+          <div class="field" style="margin-top:6px;">
+            <input id="opacityInput" type="range" min="0" max="100" value="72" />
+            <div style="display:flex;justify-content:space-between;color:var(--text-secondary);font-size:11px;margin-top:2px;">
+              <span>透明</span><span id="opacityValue">72%</span><span>实色</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Personal Journal</p>
+            <h2>记录每一天的点滴</h2>
+          </div>
+          <div class="stats" aria-label="日记统计">
+            <div>
+              <strong id="statEntries">0</strong>
+              <span>记录</span>
+            </div>
+            <div>
+              <strong id="statPhotos">0</strong>
+              <span>图片</span>
+            </div>
+            <div>
+              <strong id="statGeo">0</strong>
+              <span>坐标</span>
+            </div>
+          </div>
+        </header>
+
+        <section class="control-band" aria-label="新建日记">
+          <form id="entryForm" class="entry-form">
+            <div class="field span-2">
+              <label for="titleInput">标题</label>
+              <input id="titleInput" required maxlength="42" placeholder="例如：凌晨两点的灵感闪回" />
+            </div>
+            <div class="field">
+              <label for="dateInput">日期</label>
+              <input id="dateInput" required type="date" />
+            </div>
+            <div class="field">
+              <label for="moodInput">情绪</label>
+              <select id="moodInput">
+                <option value="calm">稳定</option>
+                <option value="bright">明亮</option>
+                <option value="storm">波动</option>
+                <option value="low">低电量</option>
+              </select>
+            </div>
+            <div class="field span-2">
+              <label for="bodyInput">记录</label>
+              <textarea id="bodyInput" required rows="5" placeholder="写下今天发生的事、当时的感受，或一个未来想回看的瞬间。"></textarea>
+            </div>
+            <div class="field">
+              <label for="energyInput">能量值 <span id="energyValue">72</span></label>
+              <input id="energyInput" type="range" min="0" max="100" value="72" />
+            </div>
+            <div class="field">
+              <label for="tagsInput">标签</label>
+              <input id="tagsInput" placeholder="成长, 灵感, 城市" />
+            </div>
+            <div class="field">
+              <label for="placeInput">地点</label>
+              <input id="placeInput" placeholder="上海 · 徐汇" />
+            </div>
+            <div class="field split">
+              <div>
+                <label for="latInput">纬度</label>
+                <input id="latInput" inputmode="decimal" placeholder="31.2304" />
+              </div>
+              <div>
+                <label for="lngInput">经度</label>
+                <input id="lngInput" inputmode="decimal" placeholder="121.4737" />
+              </div>
+            </div>
+            <div class="field span-2">
+              <label for="imageInput">图片记忆</label>
+              <div class="upload-row">
+                <input id="imageInput" type="file" accept="image/*" />
+                <button id="geoButton" class="ghost-button" type="button">读取当前位置</button>
+                <button class="primary-button" type="submit">保存节点</button>
+              </div>
+              <div id="imagePreview" class="image-preview" hidden></div>
+            </div>
+          </form>
+        </section>
+
+        <section class="main-grid">
+          <section class="timeline-panel" aria-label="时间线">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">REVIEW</p>
+                <h3>时间线</h3>
+              </div>
+              <button id="newButton" class="ghost-button compact" type="button">新建</button>
+            </div>
+            <div id="timelineList" class="timeline-list"></div>
+          </section>
+
+          <section class="detail-panel" aria-live="polite">
+            <div id="entryDetail" class="empty-detail">
+              <p>选择一个时间点，回看当时的文字、图片和地理坐标。</p>
+            </div>
+          </section>
+
+          <aside class="insight-panel">
+            <section class="map-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">GEO</p>
+                  <h3>坐标图谱</h3>
+                </div>
+              </div>
+              <div id="mapGrid" class="map-grid" aria-label="坐标标记图"></div>
+            </section>
+
+            <section class="review-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">AI-LIKE REVIEW</p>
+                  <h3>回顾摘要</h3>
+                </div>
+              </div>
+              <div id="reviewSummary" class="summary-list"></div>
+            </section>
+          </aside>
+        </section>
+      </section>
+    </main>
+
+    <template id="timelineItemTemplate">
+      <article class="timeline-item">
+        <button class="timeline-card" type="button">
+          <time></time>
+          <div>
+            <h4></h4>
+            <p></p>
+            <div class="marker-row"></div>
+          </div>
+        </button>
+      </article>
+    </template>
+    <template id="timelineItemTemplate">
+      <article class="timeline-item">
+        <button class="timeline-card" type="button">
+          <time></time>
+          <div>
+            <h4></h4>
+            <p></p>
+            <div class="marker-row"></div>
+          </div>
+        </button>
+      </article>
+    </template>
+
+    <script>
+const STORAGE_KEY = "cyber-diary.entries.v1";
+const THEME_KEY = "cyber-diary.theme";
+const BG_KEY = "cyber-diary.bg";
+localStorage.removeItem(STORAGE_KEY);
+
+const moodMeta = {
+  calm: { label: "稳定", tone: "#007aff" },
+  bright: { label: "明亮", tone: "#34c759" },
+  storm: { label: "波动", tone: "#af52de" },
+  low: { label: "低电量", tone: "#ff9500" },
+};
+
+const sampleEntries = [
+  {
+    id: "sample-20260702",
+    title: "把日记变成坐标",
+    date: "2026-07-02",
+    mood: "bright",
+    energy: 86,
+    body: "今天决定做一个记忆日记。它不应该像复杂的管理系统，而是像一个可以随时回看的个人黑匣子：文字、图片、地点和情绪都能变成时间线上的标记点。",
+    tags: ["产品", "灵感", "大赛"],
+    place: "上海 · 徐汇",
+    lat: 31.1836,
+    lng: 121.4367,
+    image: "",
+    createdAt: "2026-07-02T02:30:00.000Z",
+  },
+  {
+    id: "sample-20260628",
+    title: "凌晨整理旧照片",
+    date: "2026-06-28",
+    mood: "calm",
+    energy: 64,
+    body: "翻到几张以前拍的街景，发现地点比文字更快唤醒记忆。时间线需要支持图片，也要能把坐标当成入口。",
+    tags: ["回顾", "照片"],
+    place: "杭州 · 西湖",
+    lat: 30.2496,
+    lng: 120.1434,
+    image: "",
+    createdAt: "2026-06-28T15:08:00.000Z",
+  },
+  {
+    id: "sample-20260617",
+    title: "低电量但没有停下",
+    date: "2026-06-17",
+    mood: "low",
+    energy: 38,
+    body: "今天效率不高，但还是记录了一个很小的进展。回顾功能应该能让我看到这些不起眼的连续性。",
+    tags: ["状态", "成长"],
+    place: "",
+    lat: null,
+    lng: null,
+    image: "",
+    createdAt: "2026-06-17T12:50:00.000Z",
+  },
+];
+
+let entries = loadEntries();
+let selectedId = entries[0]?.id ?? null;
+let activeFilter = "all";
+let editId = null;
+let pendingImage = "";
+
+const els = {
+  form: document.querySelector("#entryForm"),
+  title: document.querySelector("#titleInput"),
+  date: document.querySelector("#dateInput"),
+  mood: document.querySelector("#moodInput"),
+  body: document.querySelector("#bodyInput"),
+  energy: document.querySelector("#energyInput"),
+  energyValue: document.querySelector("#energyValue"),
+  tags: document.querySelector("#tagsInput"),
+  place: document.querySelector("#placeInput"),
+  lat: document.querySelector("#latInput"),
+  lng: document.querySelector("#lngInput"),
+  image: document.querySelector("#imageInput"),
+  imagePreview: document.querySelector("#imagePreview"),
+  geoButton: document.querySelector("#geoButton"),
+  newButton: document.querySelector("#newButton"),
+  search: document.querySelector("#searchInput"),
+  timeline: document.querySelector("#timelineList"),
+  detail: document.querySelector("#entryDetail"),
+  map: document.querySelector("#mapGrid"),
+  review: document.querySelector("#reviewSummary"),
+  statEntries: document.querySelector("#statEntries"),
+  statPhotos: document.querySelector("#statPhotos"),
+  statGeo: document.querySelector("#statGeo"),
+  exportButton: document.querySelector("#exportButton"),
+  importInput: document.querySelector("#importInput"),
+  resetButton: document.querySelector("#resetButton"),
+  template: document.querySelector("#timelineItemTemplate"),
+  themeOptions: document.querySelector("#themeOptions"),
+  bgGallery: document.querySelector("#bgGallery"),
+  bgUpload: document.querySelector("#bgUpload"),
+  blurInput: document.querySelector("#blurInput"),
+  blurValue: document.querySelector("#blurValue"),
+  opacityInput: document.querySelector("#opacityInput"),
+  opacityValue: document.querySelector("#opacityValue"),
+};
+
+setDefaultDate();
+bindEvents();
+initTheme();
+initBackground();
+initGlassSettings();
+render();
+updateEnergyTone(els.energy.value);
+
+/* ========== Theme System ========== */
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY) || "light";
+  setTheme(saved);
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem(THEME_KEY, theme);
+  els.themeOptions?.querySelectorAll(".theme-chip").forEach((chip) => {
+    chip.classList.toggle("active", chip.dataset.theme === theme);
+  });
+}
+
+/* ========== Background System ========== */
+function initBackground() {
+  const saved = localStorage.getItem(BG_KEY);
+  if (saved) {
+    if (saved.startsWith("data:")) {
+      applyCustomBg(saved);
+    } else {
+      applyPresetBg(saved);
+    }
+  }
+}
+
+function applyPresetBg(key) {
+  const gradients = {
+    city: "linear-gradient(135deg, #667eea, #764ba2)",
+    sunset: "linear-gradient(135deg, #f093fb, #f5576c)",
+    sea: "linear-gradient(135deg, #4facfe, #00f2fe)",
+    window: "linear-gradient(135deg, #a8edea, #fed6e3)",
+    night: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+  };
+  const body = document.body;
+  if (key === "none" || !gradients[key]) {
+    body.style.backgroundImage = "";
+    body.classList.remove("has-custom-bg");
+  } else {
+    body.style.backgroundImage = gradients[key];
+    body.classList.add("has-custom-bg");
+  }
+  localStorage.setItem(BG_KEY, key);
+  updateBgSelection(key);
+}
+
+function applyCustomBg(dataUrl) {
+  const body = document.body;
+  body.style.backgroundImage = `url("${dataUrl}")`;
+  body.classList.add("has-custom-bg");
+  localStorage.setItem(BG_KEY, dataUrl);
+  updateBgSelection("custom");
+}
+
+function updateBgSelection(key) {
+  els.bgGallery?.querySelectorAll(".bg-thumb").forEach((thumb) => {
+    thumb.classList.toggle("active", thumb.dataset.bg === key);
+  });
+}
+
+function setBgBlur(px) {
+  const val = `${px}px`;
+  document.documentElement.style.setProperty("--bg-blur", val);
+  if (els.blurValue) els.blurValue.textContent = val;
+  localStorage.setItem("cyber-diary.bgBlur", val);
+}
+
+function setBgOpacity(pct) {
+  const val = pct / 100;
+  document.documentElement.style.setProperty("--bg-opacity", val);
+  if (els.opacityValue) els.opacityValue.textContent = `${pct}%`;
+  localStorage.setItem("cyber-diary.bgOpacity", String(val));
+}
+
+function initGlassSettings() {
+  const savedBlur = localStorage.getItem("cyber-diary.bgBlur");
+  const savedOpacity = localStorage.getItem("cyber-diary.bgOpacity");
+  if (savedBlur) {
+    const px = parseInt(savedBlur, 10) || 20;
+    if (els.blurInput) els.blurInput.value = px;
+    setBgBlur(px);
+  }
+  if (savedOpacity) {
+    const val = parseFloat(savedOpacity);
+    const pct = Number.isFinite(val) ? Math.round(val * 100) : 72;
+    if (els.opacityInput) els.opacityInput.value = pct;
+    setBgOpacity(pct);
+  }
+}
+
+/* ========== Original functions ========== */
+function loadEntries() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleEntries));
+    return [...sampleEntries];
+  }
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) && parsed.length ? parsed : [...sampleEntries];
+  } catch {
+    return [...sampleEntries];
+  }
+}
+
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+function bindEvents() {
+  els.energy.addEventListener("input", () => {
+    els.energyValue.textContent = els.energy.value;
+    updateEnergyTone(els.energy.value);
+  });
+
+  els.search.addEventListener("input", render);
+
+  document.querySelectorAll(".filter-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeFilter = button.dataset.filter;
+      document.querySelectorAll(".filter-button").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      render();
+    });
+  });
+
+  // Theme switcher
+  els.themeOptions?.querySelectorAll(".theme-chip").forEach((chip) => {
+    chip.addEventListener("click", () => setTheme(chip.dataset.theme));
+  });
+
+  // Background gallery
+  els.bgGallery?.querySelectorAll(".bg-thumb").forEach((thumb) => {
+    thumb.addEventListener("click", () => applyPresetBg(thumb.dataset.bg));
+  });
+
+  // Background upload
+  els.bgUpload?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      applyCustomBg(String(reader.result));
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Glass blur slider
+  els.blurInput?.addEventListener("input", () => {
+    setBgBlur(Number(els.blurInput.value));
+  });
+
+  // Glass opacity slider
+  els.opacityInput?.addEventListener("input", () => {
+    setBgOpacity(Number(els.opacityInput.value));
+  });
+
+  els.image.addEventListener("change", handleImage);
+  els.form.addEventListener("submit", saveEntry);
+  els.geoButton.addEventListener("click", readGeoLocation);
+  els.newButton.addEventListener("click", clearForm);
+  els.exportButton.addEventListener("click", exportEntries);
+  els.importInput.addEventListener("change", importEntries);
+  els.resetButton.addEventListener("click", resetSamples);
+}
+
+function setDefaultDate() {
+  els.date.value = new Date().toISOString().slice(0, 10);
+}
+
+function handleImage(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    pendingImage = String(reader.result);
+    els.imagePreview.hidden = false;
+    els.imagePreview.style.backgroundImage = `url("${pendingImage}")`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveEntry(event) {
+  event.preventDefault();
+  const previous = entries.find((entry) => entry.id === editId);
+  const lat = toNumberOrNull(els.lat.value);
+  const lng = toNumberOrNull(els.lng.value);
+  const next = {
+    id: editId || `entry-${Date.now()}`,
+    title: els.title.value.trim(),
+    date: els.date.value,
+    mood: els.mood.value,
+    energy: Number(els.energy.value),
+    body: els.body.value.trim(),
+    tags: splitTags(els.tags.value),
+    place: els.place.value.trim(),
+    lat,
+    lng,
+    image: pendingImage || previous?.image || "",
+    createdAt: previous?.createdAt || new Date().toISOString(),
+  };
+  if ((lat === null) !== (lng === null)) {
+    window.alert("如果要记录坐标，请同时填写纬度和经度。");
+    return;
+  }
+  if (editId) {
+    entries = entries.map((entry) => (entry.id === editId ? next : entry));
+  } else {
+    entries = [next, ...entries];
+  }
+  selectedId = next.id;
+  persist();
+  clearForm();
+  render();
+}
+
+function clearForm() {
+  editId = null;
+  pendingImage = "";
+  els.form.reset();
+  els.energy.value = 72;
+  els.energyValue.textContent = "72";
+  els.imagePreview.hidden = true;
+  els.imagePreview.style.backgroundImage = "";
+  setDefaultDate();
+  updateEnergyTone(72);
+  els.title.focus();
+}
+
+function readGeoLocation() {
+  if (!navigator.geolocation) {
+    window.alert("当前浏览器不支持读取位置，可以手动输入坐标。");
+    return;
+  }
+  els.geoButton.textContent = "定位中";
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      els.lat.value = position.coords.latitude.toFixed(6);
+      els.lng.value = position.coords.longitude.toFixed(6);
+      els.geoButton.textContent = "读取当前位置";
+    },
+    () => {
+      els.geoButton.textContent = "读取当前位置";
+      window.alert("没有获得定位权限，可以手动输入坐标。");
+    },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
+
+function render() {
+  const visible = getVisibleEntries();
+  if (!visible.some((entry) => entry.id === selectedId)) {
+    selectedId = visible[0]?.id ?? entries[0]?.id ?? null;
+  }
+  renderStats();
+  renderTimeline(visible);
+  renderDetail();
+  renderMap();
+  renderReview();
+}
+
+function getVisibleEntries() {
+  const query = els.search.value.trim().toLowerCase();
+  return entries
+    .filter((entry) => {
+      if (activeFilter === "photo" && !entry.image) return false;
+      if (activeFilter === "geo" && !hasGeo(entry)) return false;
+      if (activeFilter === "high" && entry.energy < 75) return false;
+      if (!query) return true;
+      return [entry.title, entry.body, entry.place, ...(entry.tags || [])].join(" ").toLowerCase().includes(query);
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function renderStats() {
+  els.statEntries.textContent = entries.length;
+  els.statPhotos.textContent = entries.filter((entry) => entry.image).length;
+  els.statGeo.textContent = entries.filter(hasGeo).length;
+}
+
+function renderTimeline(visible) {
+  els.timeline.replaceChildren();
+  if (!visible.length) {
+    const empty = document.createElement("p");
+    empty.className = "summary-card";
+    empty.textContent = "没有匹配的记忆节点。";
+    els.timeline.append(empty);
+    return;
+  }
+  visible.forEach((entry) => {
+    const node = els.template.content.firstElementChild.cloneNode(true);
+    const button = node.querySelector("button");
+    button.classList.toggle("active", entry.id === selectedId);
+    button.addEventListener("click", () => {
+      selectedId = entry.id;
+      render();
+    });
+    node.querySelector("time").textContent = formatDate(entry.date);
+    node.querySelector("h4").textContent = entry.title;
+    node.querySelector("p").textContent = entry.body.slice(0, 68) + (entry.body.length > 68 ? "..." : "");
+    const markerRow = node.querySelector(".marker-row");
+    markerRow.append(createChip(moodMeta[entry.mood]?.label || "状态"));
+    markerRow.append(createChip(`${entry.energy}%`));
+    if (entry.image) markerRow.append(createChip("图片"));
+    if (hasGeo(entry)) markerRow.append(createChip("坐标"));
+    els.timeline.append(node);
+  });
+}
+
+function renderDetail() {
+  const entry = entries.find((item) => item.id === selectedId);
+  if (!entry) {
+    els.detail.className = "empty-detail";
+    els.detail.textContent = "还没有记录。先保存一个记忆节点。";
+    return;
+  }
+  els.detail.className = "";
+  els.detail.replaceChildren();
+  const hero = document.createElement("div");
+  hero.className = "detail-hero";
+  hero.style.backgroundImage = entry.image
+    ? `url("${entry.image}")`
+    : `linear-gradient(135deg, ${moodMeta[entry.mood]?.tone || "#007aff"}33, #f0f0f2)`;
+  els.detail.append(hero);
+  const titleWrap = document.createElement("div");
+  titleWrap.className = "detail-title";
+  const titleBox = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow";
+  eyebrow.textContent = "MEMORY NODE";
+  const title = document.createElement("h3");
+  title.textContent = entry.title;
+  titleBox.append(eyebrow, title);
+  const time = document.createElement("time");
+  time.textContent = formatDate(entry.date);
+  titleWrap.append(titleBox, time);
+  els.detail.append(titleWrap);
+  const meta = document.createElement("div");
+  meta.className = "meta-grid";
+  meta.append(
+    createMeta("情绪", moodMeta[entry.mood]?.label || "未知"),
+    createMeta("能量", `${entry.energy}%`),
+    createMeta("地点", entry.place || "未记录")
+  );
+  els.detail.append(meta);
+  const body = document.createElement("p");
+  body.className = "entry-body";
+  body.textContent = entry.body;
+  els.detail.append(body);
+  const tags = document.createElement("div");
+  tags.className = "tag-row";
+  (entry.tags || []).forEach((tag) => tags.append(createChip(`#${tag}`)));
+  if (hasGeo(entry)) tags.append(createChip(`${entry.lat.toFixed(4)}, ${entry.lng.toFixed(4)}`));
+  els.detail.append(tags);
+  const actions = document.createElement("div");
+  actions.className = "tag-row";
+  const editButton = document.createElement("button");
+  editButton.className = "ghost-button compact";
+  editButton.type = "button";
+  editButton.textContent = "载入编辑";
+  editButton.addEventListener("click", () => loadForEdit(entry));
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "ghost-button compact";
+  deleteButton.type = "button";
+  deleteButton.textContent = "删除节点";
+  deleteButton.addEventListener("click", () => deleteEntry(entry.id));
+  actions.append(editButton, deleteButton);
+  els.detail.append(actions);
+}
+
+function renderMap() {
+  els.map.replaceChildren();
+  const geoEntries = entries.filter(hasGeo);
+  if (!geoEntries.length) {
+    const empty = document.createElement("div");
+    empty.className = "summary-card";
+    empty.textContent = "有坐标的日记会在这里形成地图标记。";
+    els.map.append(empty);
+    return;
+  }
+  const lats = geoEntries.map((entry) => entry.lat);
+  const lngs = geoEntries.map((entry) => entry.lng);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  geoEntries.forEach((entry) => {
+    const pin = document.createElement("button");
+    pin.type = "button";
+    pin.className = "map-pin";
+    pin.classList.toggle("active", entry.id === selectedId);
+    pin.title = `${entry.title} · ${entry.place || "未知地点"}`;
+    pin.style.left = `${scale(entry.lng, minLng, maxLng, 12, 88)}%`;
+    pin.style.top = `${100 - scale(entry.lat, minLat, maxLat, 14, 86)}%`;
+    pin.addEventListener("click", () => {
+      selectedId = entry.id;
+      render();
+    });
+    els.map.append(pin);
+  });
+}
+
+function renderReview() {
+  els.review.replaceChildren();
+  const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
+  const avgEnergy = entries.length
+    ? Math.round(entries.reduce((sum, entry) => sum + entry.energy, 0) / entries.length)
+    : 0;
+  const tag = mostCommon(entries.flatMap((entry) => entry.tags || []));
+  const places = entries.filter((entry) => entry.place).map((entry) => entry.place);
+  const recent = sorted.slice(0, 5);
+  const high = sorted.filter((entry) => entry.energy >= 75).length;
+  const cards = [
+    `当前档案有 <strong>${entries.length}</strong> 个记忆节点，平均能量值 <strong>${avgEnergy}%</strong>。`,
+    tag ? `反复出现的关键词是 <strong>#${escapeHTML(tag)}</strong>，它可以作为后续回顾的主线。` : "还没有形成稳定关键词，继续记录会让主题浮现。",
+    places.length ? `已记录 <strong>${new Set(places).size}</strong> 个地点，坐标会自动落在右侧图谱中。` : "还没有地点数据，可以从下一篇开始加入坐标。",
+    `最近 5 条记录中有 <strong>${high}</strong> 条高能量节点，适合在时间线中标记为阶段高光。`,
+    recent[0] ? `最近一次记录是 <strong>${formatDate(recent[0].date)}</strong> 的「${escapeHTML(recent[0].title)}」。` : "保存第一篇日记后，这里会生成回顾摘要。",
+  ];
+  cards.forEach((html) => {
+    const card = document.createElement("div");
+    card.className = "summary-card";
+    card.innerHTML = html;
+    els.review.append(card);
+  });
+}
+
+function createMeta(label, value) {
+  const item = document.createElement("div");
+  const labelEl = document.createElement("span");
+  const valueEl = document.createElement("strong");
+  labelEl.textContent = label;
+  valueEl.textContent = value;
+  item.append(labelEl, valueEl);
+  return item;
+}
+
+function createChip(text) {
+  const chip = document.createElement("span");
+  chip.className = "chip";
+  chip.textContent = text;
+  return chip;
+}
+
+function loadForEdit(entry) {
+  editId = entry.id;
+  pendingImage = "";
+  els.title.value = entry.title;
+  els.date.value = entry.date;
+  els.mood.value = entry.mood;
+  els.body.value = entry.body;
+  els.energy.value = entry.energy;
+  els.energyValue.textContent = entry.energy;
+  updateEnergyTone(entry.energy);
+  els.tags.value = (entry.tags || []).join(", ");
+  els.place.value = entry.place || "";
+  els.lat.value = entry.lat ?? "";
+  els.lng.value = entry.lng ?? "";
+  els.image.value = "";
+  els.imagePreview.hidden = !entry.image;
+  els.imagePreview.style.backgroundImage = entry.image ? `url("${entry.image}")` : "";
+  els.title.focus();
+}
+
+function deleteEntry(id) {
+  const entry = entries.find((item) => item.id === id);
+  if (!entry) return;
+  if (!window.confirm(`删除「${entry.title}」？`)) return;
+  entries = entries.filter((item) => item.id !== id);
+  selectedId = entries[0]?.id ?? null;
+  persist();
+  render();
+}
+
+function exportEntries() {
+  const payload = JSON.stringify({ exportedAt: new Date().toISOString(), entries }, null, 2);
+  const blob = new Blob([payload], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `memory-diary-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function importEntries(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      const imported = Array.isArray(parsed) ? parsed : parsed.entries;
+      if (!Array.isArray(imported)) throw new Error("Invalid format");
+      entries = imported.map(normalizeEntry).filter(Boolean);
+      selectedId = entries[0]?.id ?? null;
+      persist();
+      render();
+    } catch {
+      window.alert("导入失败，请选择记忆日记导出的 JSON 文件。");
+    } finally {
+      els.importInput.value = "";
+    }
+  };
+  reader.readAsText(file);
+}
+
+function resetSamples() {
+  if (!window.confirm("恢复示例数据会覆盖当前本地日记，确定继续？")) return;
+  entries = [...sampleEntries];
+  selectedId = entries[0].id;
+  persist();
+  clearForm();
+  render();
+}
+
+function normalizeEntry(entry) {
+  if (!entry || !entry.title || !entry.date || !entry.body) return null;
+  return {
+    id: entry.id || `entry-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    title: String(entry.title).slice(0, 80),
+    date: String(entry.date).slice(0, 10),
+    mood: moodMeta[entry.mood] ? entry.mood : "calm",
+    energy: clamp(Number(entry.energy) || 50, 0, 100),
+    body: String(entry.body),
+    tags: Array.isArray(entry.tags) ? entry.tags.map(String) : splitTags(String(entry.tags || "")),
+    place: String(entry.place || ""),
+    lat: toNumberOrNull(entry.lat),
+    lng: toNumberOrNull(entry.lng),
+    image: String(entry.image || ""),
+    createdAt: entry.createdAt || new Date().toISOString(),
+  };
+}
+
+function splitTags(value) {
+  return value
+    .split(/[,，\s]+/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function hasGeo(entry) {
+  return typeof entry.lat === "number" && typeof entry.lng === "number";
+}
+
+function toNumberOrNull(value) {
+  if (value === "" || value === null || value === undefined) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function scale(value, min, max, outMin, outMax) {
+  if (min === max) return (outMin + outMax) / 2;
+  return outMin + ((value - min) / (max - min)) * (outMax - outMin);
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function mostCommon(items) {
+  const counts = new Map();
+  items.forEach((item) => counts.set(item, (counts.get(item) || 0) + 1));
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  }).format(new Date(`${value}T00:00:00`));
+}
+
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function updateEnergyTone(energy) {
+  const n = Number(energy);
+  const e = n / 100;
+  let mainHue;
+  if (e <= 0.5) {
+    mainHue = 210 - e * 80;
+  } else {
+    mainHue = 170 - (e - 0.5) * 316;
+  }
+  const theme = document.documentElement.getAttribute("data-theme") || "light";
+  if (theme === "cyber") {
+    document.documentElement.style.setProperty("--accent", `hsl(${mainHue}, 90%, 60%)`);
+  }
+  document.documentElement.style.setProperty("--energy-pct", `${n}%`);
+}
+    </script>
+  </body>
+</html>
