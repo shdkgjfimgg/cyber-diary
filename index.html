@@ -609,6 +609,76 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 10px;
 }
 
+.backup-panel {
+  display: grid;
+  gap: 12px;
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+}
+
+.backup-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.backup-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  letter-spacing: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.backup-button:hover {
+  background: var(--surface-3);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.backup-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.backup-path {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 3px 7px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0;
+}
+
+.setting-note {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
 .ghost-button, .primary-button {
   padding: 0 12px;
   color: var(--text);
@@ -2464,6 +2534,7 @@ input[type="range"]::-moz-range-thumb {
               <div style="display:flex;justify-content:space-between;color:var(--text-secondary);font-size:10px;margin-top:1px;">
                 <span data-i18n="clear">清晰</span><span id="blurValue">20px</span><span data-i18n="fuzzy">朦胧</span>
               </div>
+              <p class="setting-note">备注：该功能对纯色背景无效或效果甚微，建议添加自定义背景后再尝试。</p>
             </div>
           </section>
 
@@ -2480,12 +2551,27 @@ input[type="range"]::-moz-range-thumb {
           <section class="profile-section">
             <h3 class="profile-section-title" data-i18n="localArchive">本地档案</h3>
             <div class="file-actions">
-              <button id="exportButton" class="icon-button" type="button" aria-label="导出 JSON" title="导出 JSON">⇩</button>
-              <label class="icon-button" aria-label="导入 JSON" title="导入 JSON">
+              <button id="exportButton" class="icon-button" type="button" aria-label="导出时间线 JSON" title="导出时间线 JSON">⇩</button>
+              <label class="icon-button" aria-label="导入时间线 JSON" title="导入时间线 JSON">
                 ⇧
                 <input id="importInput" class="sr-only" type="file" accept="application/json" />
               </label>
               <button id="resetButton" class="icon-button danger" type="button" aria-label="恢复示例数据" title="恢复示例数据">↻</button>
+            </div>
+          </section>
+
+          <section class="profile-section">
+            <h3 class="profile-section-title">数据备份</h3>
+            <div class="backup-panel">
+              <div class="backup-actions">
+                <button id="exportAllButton" class="backup-button" type="button">导出全部数据</button>
+                <label class="backup-button" for="importAllInput">导入全部数据</label>
+                <input id="importAllInput" class="sr-only" type="file" accept="application/json" />
+              </div>
+              <p class="backup-hint">
+                完整备份会包含时间线记录、记录图片、草稿、当前背景、自定义背景库和记录备份。建议下载后手动保存到：
+                <span class="backup-path">D:\MemoryDiary\data\</span>
+              </p>
             </div>
           </section>
         </div>
@@ -2614,6 +2700,8 @@ const els = {
   statGeo: document.querySelector("#statGeo"),
   exportButton: document.querySelector("#exportButton"),
   importInput: document.querySelector("#importInput"),
+  exportAllButton: document.querySelector("#exportAllButton"),
+  importAllInput: document.querySelector("#importAllInput"),
   resetButton: document.querySelector("#resetButton"),
   template: document.querySelector("#timelineItemTemplate"),
   themeOptions: document.querySelector("#themeOptions"),
@@ -2970,16 +3058,26 @@ function initGlassSettings() {
 
 /* ========== Original functions ========== */
 function loadEntries() {
-  const candidates = getEntryStorageCandidates();
-  const best = candidates
-    .filter((item) => item.entries.length)
-    .sort((a, b) => b.entries.length - a.entries.length)[0];
+  const main = readEntryListFromStorage(STORAGE_KEY);
+  if (main.valid && main.entries.length) {
+    return main.entries;
+  }
+
+  const candidates = getEntryStorageCandidates()
+    .filter((item) => item.key !== STORAGE_KEY && item.entries.length)
+    .sort((a, b) => scoreEntryCandidate(b.entries) - scoreEntryCandidate(a.entries));
+  const best = candidates[0];
   if (best) {
-    if (best.key !== STORAGE_KEY) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(best.entries));
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(best.entries));
     return best.entries;
   }
+
+  const latestBackup = getLatestEntryBackup();
+  if (latestBackup.length) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(latestBackup));
+    return latestBackup;
+  }
+
   return [...sampleEntries];
 }
 
@@ -2991,29 +3089,47 @@ function getEntryStorageCandidates() {
     "memory-diary.entries",
     "memoryDiaryEntries",
   ];
-  const result = [];
-  candidateKeys.forEach((key) => {
-    const saved = localStorage.getItem(key);
-    if (!saved) {
-      result.push({ key, entries: [], valid: false });
-      return;
-    }
-    try {
-      const parsed = JSON.parse(saved);
-      const list = Array.isArray(parsed) ? parsed : parsed.entries;
-      const entries = Array.isArray(list) ? list.map(normalizeEntry).filter(Boolean) : [];
-      result.push({ key, entries, valid: true });
-    } catch {
-      result.push({ key, entries: [], valid: false });
-    }
-  });
-  return result;
+  return candidateKeys.map(readEntryListFromStorage);
+}
+
+function readEntryListFromStorage(key) {
+  const saved = localStorage.getItem(key);
+  if (!saved) return { key, entries: [], valid: false };
+  try {
+    const parsed = JSON.parse(saved);
+    const list = Array.isArray(parsed) ? parsed : parsed.entries;
+    const entries = Array.isArray(list) ? list.map(normalizeEntry).filter(Boolean) : [];
+    return { key, entries, valid: true };
+  } catch {
+    return { key, entries: [], valid: false };
+  }
+}
+
+function scoreEntryCandidate(list) {
+  const sampleIds = new Set(sampleEntries.map((entry) => entry.id));
+  const userCount = list.filter((entry) => !sampleIds.has(entry.id)).length;
+  return userCount * 1000 + list.length;
+}
+
+function getLatestEntryBackup() {
+  try {
+    const backups = JSON.parse(localStorage.getItem(ENTRY_BACKUP_KEY) || "[]");
+    const latest = backups.find((item) => Array.isArray(item.entries) && item.entries.length);
+    return latest ? latest.entries.map(normalizeEntry).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
 }
 
 function persist() {
   try {
     backupCurrentEntries();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    const saved = readEntryListFromStorage(STORAGE_KEY).entries;
+    if (saved.length !== entries.length || !saved.some((entry) => entry.id === selectedId)) {
+      window.alert("保存校验失败：浏览器没有正确写入记录，请先导出全部数据备份。");
+      return false;
+    }
     return true;
   } catch (error) {
     console.error("保存失败", error);
@@ -3167,6 +3283,8 @@ function bindEvents() {
   els.newButton.addEventListener("click", clearForm);
   els.exportButton.addEventListener("click", exportEntries);
   els.importInput.addEventListener("change", importEntries);
+  els.exportAllButton?.addEventListener("click", exportAllData);
+  els.importAllInput?.addEventListener("change", importAllData);
   els.resetButton.addEventListener("click", resetSamples);
   els.diagnoseStorageButton?.addEventListener("click", diagnoseEntryStorage);
   els.restoreEntryBackupButton?.addEventListener("click", restoreLatestEntryBackup);
@@ -3655,6 +3773,7 @@ function saveEntry(event) {
 
   clearForm();
   render();
+  renderHome();
   if (hasPartialCoord) {
     window.alert("已保存节点。坐标只填写了一半，所以本次按普通记录保存。");
   }
@@ -4254,13 +4373,7 @@ function deleteEntry(id) {
 }
 
 function exportEntries() {
-  const payload = JSON.stringify({ exportedAt: new Date().toISOString(), entries }, null, 2);
-  const blob = new Blob([payload], { type: "application/json" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `memory-diary-${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  downloadJson({ exportedAt: new Date().toISOString(), entries }, `memory-diary-${new Date().toISOString().slice(0, 10)}.json`);
 }
 
 function importEntries(event) {
@@ -4283,6 +4396,110 @@ function importEntries(event) {
     }
   };
   reader.readAsText(file);
+}
+
+function exportAllData() {
+  const payload = {
+    app: "Memory Diary",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    recommendedSavePath: "D:\\MemoryDiary\\data\\",
+    entries,
+    settings: {
+      theme: localStorage.getItem(THEME_KEY) || "light",
+      accent: localStorage.getItem("cyber-diary.accent") || "",
+      fontColor: localStorage.getItem("cyber-diary.fontColor") || "auto",
+      background: localStorage.getItem(BG_KEY) || "",
+      bgBlur: localStorage.getItem("cyber-diary.bgBlur") || "",
+      bgOpacity: localStorage.getItem("cyber-diary.bgOpacity") || "",
+      language: localStorage.getItem("cyber-diary.lang") || "zh",
+    },
+    backgroundLibrary: getBgLibrary(),
+    drafts: {
+      latest: getAutoDraft(),
+      list: getDrafts(),
+    },
+    entryBackups: readJsonStorage(ENTRY_BACKUP_KEY, []),
+  };
+  downloadJson(payload, `memory-diary-full-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  window.alert("完整备份已生成。请在下载时选择或移动到 D:\\MemoryDiary\\data\\ 保存。");
+}
+
+function importAllData(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      const importedEntries = Array.isArray(parsed.entries) ? parsed.entries.map(normalizeEntry).filter(Boolean) : [];
+      if (!importedEntries.length && !window.confirm("备份里没有时间线记录，仍要导入设置和背景吗？")) return;
+
+      if (importedEntries.length) {
+        entries = importedEntries;
+        selectedId = entries[0]?.id ?? null;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      }
+
+      if (parsed.settings) {
+        if (parsed.settings.theme) localStorage.setItem(THEME_KEY, parsed.settings.theme);
+        if (parsed.settings.accent) localStorage.setItem("cyber-diary.accent", parsed.settings.accent);
+        if (parsed.settings.fontColor) localStorage.setItem("cyber-diary.fontColor", parsed.settings.fontColor);
+        if (parsed.settings.background) localStorage.setItem(BG_KEY, parsed.settings.background);
+        if (parsed.settings.bgBlur) localStorage.setItem("cyber-diary.bgBlur", parsed.settings.bgBlur);
+        if (parsed.settings.bgOpacity) localStorage.setItem("cyber-diary.bgOpacity", parsed.settings.bgOpacity);
+        if (parsed.settings.language) localStorage.setItem("cyber-diary.lang", parsed.settings.language);
+      }
+
+      if (Array.isArray(parsed.backgroundLibrary)) {
+        setBgLibrary(parsed.backgroundLibrary);
+      }
+      if (parsed.drafts?.latest) {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(parsed.drafts.latest));
+      }
+      if (Array.isArray(parsed.drafts?.list)) {
+        setDrafts(parsed.drafts.list);
+      }
+      if (Array.isArray(parsed.entryBackups)) {
+        localStorage.setItem(ENTRY_BACKUP_KEY, JSON.stringify(parsed.entryBackups.slice(0, 10)));
+      }
+
+      initTheme();
+      initBackground();
+      initGlassSettings();
+      initLanguage();
+      initAccentColor();
+      initFontColor();
+      updateDraftBadge();
+      render();
+      renderHome();
+      window.alert("完整数据已导入。");
+    } catch (error) {
+      console.error("完整导入失败", error);
+      window.alert("导入失败，请选择完整备份 JSON 文件。");
+    } finally {
+      els.importAllInput.value = "";
+    }
+  };
+  reader.readAsText(file);
+}
+
+function downloadJson(payload, filename) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function readJsonStorage(key, fallback) {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function resetSamples() {
